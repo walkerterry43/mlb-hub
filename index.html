@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MLB Hub">
+  <meta name="theme-color" content="#071527">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>MLB Live Hub | All 30 Teams</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{--primary:#0C2340;--secondary:#CE1141;--accent:#EAAA00;--dark:#071527;--light:#f4f6f9;--white:#fff;--card-bg:#112d52;--border:rgba(234,170,0,0.25);--radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4)}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--dark);color:var(--white);min-height:100vh;overflow-x:hidden}
+    a{text-decoration:none;color:inherit}button{cursor:pointer;border:none;outline:none;font-family:inherit}
+    ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:var(--dark)}::-webkit-scrollbar-thumb{background:var(--secondary);border-radius:4px}
+
+    /* LIVE TICKER */
+    #ticker{background:var(--secondary);padding:6px 0;overflow:hidden;position:relative;border-bottom:2px solid var(--accent)}
+    .ticker-label{position:absolute;left:0;top:0;bottom:0;background:var(--dark);color:var(--accent);font-weight:800;font-size:.72rem;letter-spacing:1.5px;padding:0 14px;display:flex;align-items:center;z-index:2;text-transform:uppercase;gap:6px}
+    .ticker-label .live-dot{width:8px;height:8px;background:#00ff88;border-radius:50%;animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .ticker-track{display:flex;animation:scroll 30s linear infinite;padding-left:140px}
+    .ticker-track:hover{animation-play-state:paused}
+    @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    .ticker-game{white-space:nowrap;padding:0 24px;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:8px;border-right:1px solid rgba(255,255,255,.2)}
+    .ticker-game .score{background:rgba(0,0,0,.3);padding:2px 8px;border-radius:4px;font-family:'Courier New',monospace;font-weight:700}
+    .ticker-game .status{color:var(--accent);font-size:.72rem;font-weight:800}
+    .ticker-game .live-badge{background:#00ff88;color:#000;font-size:.65rem;font-weight:900;padding:1px 6px;border-radius:3px;animation:pulse 1.5s infinite}
+
+    /* NAVBAR */
+    #navbar{background:var(--primary);border-bottom:3px solid var(--accent);position:sticky;top:0;z-index:999;display:flex;align-items:center;padding:0 24px;height:60px;gap:8px}
+    .nav-logo{display:flex;align-items:center;gap:10px;margin-right:20px;font-size:1rem;font-weight:900;letter-spacing:.5px}
+    .nav-logo span{color:var(--secondary)}
+    .nav-links{display:flex;gap:4px;flex:1;flex-wrap:nowrap;overflow-x:auto}
+    .nav-btn{background:none;color:var(--white);font-size:.82rem;font-weight:700;padding:8px 14px;border-radius:6px;display:flex;align-items:center;gap:5px;transition:.2s;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+    .nav-btn:hover,.nav-btn.active{background:var(--secondary)}
+    .nav-btn i{color:var(--accent);font-size:.75rem}
+    .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+    .team-select{background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:6px 10px;font-size:.8rem;font-weight:700;font-family:inherit;cursor:pointer}
+    .team-select option{background:var(--dark);color:white}
+    .team-select optgroup{background:var(--dark);color:var(--accent);font-weight:800}
+    .refresh-btn{background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--white);width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:.2s}
+    .refresh-btn:hover{background:var(--secondary);border-color:var(--secondary)}
+    .refresh-btn.spinning i{animation:spin .8s linear}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .last-update{font-size:.65rem;color:rgba(255,255,255,.5);white-space:nowrap}
+
+    /* SECTIONS */
+    .section{display:none;padding:24px;max-width:1400px;margin:0 auto}
+    .section.active{display:block}
+    .section-title{font-size:1.4rem;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:10px;text-transform:uppercase;letter-spacing:1px}
+    .section-title i{color:var(--accent)}
+
+    /* HOME SECTION */
+    .home-hero{position:relative;border-radius:var(--radius);overflow:hidden;margin-bottom:24px;border:1px solid var(--border)}
+    .home-hero-bg{background:linear-gradient(135deg,var(--primary) 0%,var(--card-bg) 50%,var(--primary) 100%);padding:36px;position:relative}
+    .home-hero .bg-text{position:absolute;right:-10px;bottom:-30px;font-size:12rem;font-weight:900;opacity:.03;line-height:1;pointer-events:none}
+    .home-hero .team-emoji{font-size:3.5rem;margin-bottom:8px}
+    .home-hero .team-name{font-size:2.4rem;font-weight:900;line-height:1.1}
+    .home-hero .team-slogan{font-size:.9rem;color:var(--accent);font-weight:700;font-style:italic;margin-top:4px}
+    .home-hero .team-record-big{font-size:1.3rem;color:var(--white);font-weight:700;margin-top:8px}
+    .home-hero .team-record-big .pct{color:rgba(255,255,255,.5);font-size:.9rem}
+    .home-hero .streak-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.78rem;font-weight:800;margin-top:6px}
+    .home-hero .streak-pill.win{background:rgba(0,255,136,.15);color:#00ff88}
+    .home-hero .streak-pill.loss{background:rgba(206,17,65,.15);color:var(--secondary)}
+    .quick-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+    .quick-pill{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:10px;flex:1;min-width:180px}
+    .quick-pill i{font-size:1.2rem;color:var(--accent);width:24px;text-align:center}
+    .quick-pill .pill-text{font-size:.78rem;color:rgba(255,255,255,.5)}
+    .quick-pill .pill-val{font-size:.92rem;font-weight:700}
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px}
+    .info-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+    .info-card .info-header{background:rgba(0,0,0,.3);padding:10px 16px;font-size:.82rem;font-weight:800;text-transform:uppercase;color:var(--accent);letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+    .info-card .info-body{padding:14px 16px}
+    .info-card .info-body p{font-size:.82rem;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:8px}
+    .info-card .info-body p:last-child{margin-bottom:0}
+    .fun-fact{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .fun-fact:last-child{border-bottom:none}
+    .fun-fact i{color:var(--accent);margin-top:2px;min-width:14px}
+    .fun-fact span{font-size:.8rem;color:rgba(255,255,255,.65);line-height:1.4}
+    .quick-access{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+    .qa-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:12px}
+    .qa-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .qa-card i{font-size:1.3rem;color:var(--accent)}
+    .qa-card .qa-text{font-size:.85rem;font-weight:700}
+    .qa-card .qa-sub{font-size:.68rem;color:rgba(255,255,255,.4)}
+
+    /* SCOREBOARD */
+    .scoreboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:24px}
+    .game-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:.2s}
+    .game-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .game-card.live{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.15)}
+    .game-header{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:rgba(0,0,0,.2);font-size:.72rem;font-weight:700;color:rgba(255,255,255,.6)}
+    .game-header .game-status{color:var(--accent);font-weight:800;text-transform:uppercase}
+    .game-header .game-status.live{color:#00ff88}
+    .game-header .game-status.final{color:var(--secondary)}
+    .game-teams{padding:10px 14px}
+    .team-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:.92rem}
+    .team-row .team-info{display:flex;align-items:center;gap:8px;font-weight:700;flex:1}
+    .team-row .record{font-size:.7rem;color:rgba(255,255,255,.4);font-weight:600}
+    .team-row .runs{font-size:1.1rem;font-weight:900;min-width:28px;text-align:center;padding:2px 6px;border-radius:4px}
+    .team-row.winner .runs{background:var(--accent);color:var(--dark)}
+    .game-linescore{padding:6px 14px 10px;font-size:.68rem;color:rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.05)}
+    .linescore-table{width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:.7rem}
+    .linescore-table th,.linescore-table td{padding:2px 5px;text-align:center;min-width:18px}
+    .linescore-table th{color:var(--accent);font-weight:700;border-bottom:1px solid rgba(255,255,255,.1)}
+    .linescore-table .total{font-weight:900;color:var(--white);font-size:.78rem}
+
+    /* STANDINGS */
+    .standings-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
+    .division-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+    .division-header{background:rgba(0,0,0,.3);padding:10px 16px;font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent);display:flex;justify-content:space-between;align-items:center}
+    .standings-table{width:100%;border-collapse:collapse;font-size:.82rem}
+    .standings-table th{padding:8px 12px;text-align:left;font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .standings-table th:not(:first-child){text-align:center}
+    .standings-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+    .standings-table td:not(:first-child){text-align:center;font-family:'Courier New',monospace;font-size:.8rem}
+    .standings-table tr:hover{background:rgba(255,255,255,.03)}
+    .standings-table .team-name{font-weight:700;cursor:pointer;transition:.2s}
+    .standings-table .team-name:hover{color:var(--accent)}
+    .standings-table .rank{color:var(--accent);font-weight:800;width:24px}
+    .standings-table .gb{color:var(--secondary);font-weight:700}
+    .standings-table .streak-w{color:#00ff88}.standings-table .streak-l{color:var(--secondary)}
+    .standings-table tr.first-place .team-name{color:var(--accent)}
+    .league-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .league-tab{padding:8px 20px;border-radius:8px;font-weight:700;font-size:.85rem;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--white);transition:.2s}
+    .league-tab.active,.league-tab:hover{background:var(--secondary);border-color:var(--secondary)}
+
+    /* SCHEDULE */
+    .schedule-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .filter-btn{padding:6px 16px;border-radius:20px;font-size:.78rem;font-weight:700;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--white);transition:.2s}
+    .filter-btn.active,.filter-btn:hover{background:var(--secondary);border-color:var(--secondary)}
+    .schedule-grid{display:grid;gap:10px}
+    .sched-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;padding:12px 16px;gap:16px;transition:.2s}
+    .sched-card:hover{border-color:var(--accent)}
+    .sched-card.next-game{border-color:var(--accent);box-shadow:0 0 12px rgba(234,170,0,.15)}
+    .sched-date{min-width:60px;text-align:center}
+    .sched-date .month{font-size:.65rem;text-transform:uppercase;color:var(--accent);font-weight:800;letter-spacing:1px}
+    .sched-date .day{font-size:1.5rem;font-weight:900;line-height:1}
+    .sched-date .dow{font-size:.65rem;color:rgba(255,255,255,.4);font-weight:600}
+    .sched-divider{width:2px;height:40px;background:var(--border);border-radius:1px}
+    .sched-matchup{flex:1}
+    .sched-matchup .teams{font-size:.92rem;font-weight:700}
+    .sched-matchup .detail{font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px}
+    .sched-broadcasts{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+    .sched-tv,.sched-radio{font-size:.68rem;color:var(--accent);background:rgba(234,170,0,.1);padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;font-weight:600}
+    .sched-radio{color:rgba(255,255,255,.5);background:rgba(255,255,255,.06)}
+    .sched-promos{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+    .sched-promo{font-size:.66rem;color:#f0a0d0;background:rgba(240,160,208,.1);padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;font-weight:600}
+    .sched-result{text-align:right;min-width:80px}
+    .sched-result .result-badge{padding:4px 12px;border-radius:6px;font-size:.78rem;font-weight:800;display:inline-block}
+    .sched-result .result-badge.win{background:rgba(0,255,136,.15);color:#00ff88}
+    .sched-result .result-badge.loss{background:rgba(206,17,65,.15);color:var(--secondary)}
+    .sched-result .result-badge.upcoming{background:rgba(234,170,0,.1);color:var(--accent)}
+    .sched-result .countdown{font-size:.68rem;color:rgba(255,255,255,.4);margin-top:2px}
+    .next-badge{background:var(--accent);color:var(--dark);font-size:.6rem;font-weight:900;padding:2px 8px;border-radius:3px;margin-left:8px}
+
+    /* TEAM PAGE */
+    .team-hero{background:linear-gradient(135deg,var(--primary),var(--card-bg));border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;position:relative;overflow:hidden}
+    .team-hero .bg-text{position:absolute;right:-20px;bottom:-20px;font-size:8rem;font-weight:900;opacity:.04;line-height:1;pointer-events:none}
+    .team-hero .team-name{font-size:2rem;font-weight:900}
+    .team-hero .team-record{font-size:1.1rem;color:var(--accent);font-weight:700;margin-top:4px}
+    .team-hero .team-meta{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap}
+    .team-hero .meta-item{font-size:.78rem;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px}
+    .team-hero .meta-item i{color:var(--accent)}
+    .team-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:16px}
+    .player-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;transition:.2s;cursor:pointer}
+    .player-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .player-card .player-header{display:flex;justify-content:space-between;align-items:flex-start}
+    .player-card .player-name{font-size:.85rem;font-weight:700}
+    .player-card .player-num{font-size:.75rem;color:var(--accent);font-weight:800}
+    .player-card .player-pos{font-size:.68rem;color:rgba(255,255,255,.4);margin-top:2px}
+    .player-card .player-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
+    .player-card .stat{text-align:center;padding:4px;background:rgba(0,0,0,.2);border-radius:4px}
+    .player-card .stat .val{font-size:.82rem;font-weight:800;color:var(--accent);font-family:'Courier New',monospace}
+    .player-card .stat .lbl{font-size:.58rem;color:rgba(255,255,255,.35);text-transform:uppercase}
+
+    /* PLAYER MODAL */
+    #playerModal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:none;justify-content:center;align-items:center;padding:20px}
+    #playerModal.open{display:flex}
+    .modal-content{background:var(--primary);border:1px solid var(--border);border-radius:var(--radius);max-width:600px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.6);position:relative}
+    .modal-header{background:linear-gradient(135deg,var(--card-bg),var(--primary));padding:20px;border-bottom:2px solid var(--accent)}
+    .modal-header .close-btn{position:absolute;top:12px;right:12px;background:none;color:rgba(255,255,255,.5);font-size:1.2rem;padding:4px 8px;border-radius:4px;transition:.2s;cursor:pointer;z-index:10}
+    .modal-header .close-btn:hover{color:var(--white);background:var(--secondary)}
+    .modal-body{padding:20px}
+    .modal-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:12px}
+    .modal-stat{text-align:center;padding:8px;background:rgba(0,0,0,.2);border-radius:8px}
+    .modal-stat .val{font-size:1.1rem;font-weight:900;color:var(--accent);font-family:'Courier New',monospace}
+    .modal-stat .lbl{font-size:.65rem;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:2px}
+    .modal-section{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+    .modal-section-title{font-size:.78rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+    .modal-bio{font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.5}
+    .modal-game-log{margin-top:8px}
+    .modal-game-log table{width:100%;border-collapse:collapse;font-size:.75rem}
+    .modal-game-log th{text-align:left;padding:4px 8px;color:var(--gold);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.08)}
+    .modal-game-log td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:'Courier New',monospace}
+    .modal-game-log tr:hover{background:rgba(255,255,255,.03)}
+
+    /* LEADERS */
+    .leaders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:16px}
+    .leader-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+    .leader-card .leader-title{background:rgba(0,0,0,.3);padding:10px 14px;font-size:.8rem;font-weight:800;text-transform:uppercase;color:var(--accent);letter-spacing:.5px}
+    .leader-card .leader-list{padding:8px 0}
+    .leader-item{display:flex;align-items:center;padding:6px 14px;gap:10px;font-size:.82rem;transition:.15s}
+    .leader-item:hover{background:rgba(255,255,255,.03)}
+    .leader-item .rank{font-weight:900;color:var(--accent);min-width:18px}
+    .leader-item .rank.gold{color:#FFD700}.leader-item .rank.silver{color:#C0C0C0}.leader-item .rank.bronze{color:#CD7F32}
+    .leader-item .name{flex:1;font-weight:600}
+    .leader-item .value{font-family:'Courier New',monospace;font-weight:800;color:var(--white)}
+
+    /* LOADING */
+    .loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:rgba(255,255,255,.4);font-size:.85rem}
+    .loading .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+    .empty-state{text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:.9rem}
+
+    /* FOOTER */
+    footer{text-align:center;padding:32px 24px;color:rgba(255,255,255,.15);font-size:.72rem;border-top:1px solid rgba(255,255,255,.05);margin-top:40px}
+
+    @media(max-width:768px){
+      .scoreboard{grid-template-columns:1fr}
+      .standings-container{grid-template-columns:1fr}
+      .nav-links .btn-label{display:none}
+      #navbar{padding:0 12px}
+      .section{padding:16px}
+      .team-hero .team-name{font-size:1.4rem}
+      .home-hero .team-name{font-size:1.5rem}
+      .info-grid{grid-template-columns:1fr}
+      .quick-stats{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LIVE TICKER -->
+<div id="ticker">
+  <div class="ticker-label"><span class="live-dot"></span> LIVE MLB</div>
+  <div class="ticker-track" id="tickerTrack"><span class="loading"><span class="spinner"></span>Loading scores...</span></div>
+</div>
+
+<!-- NAVBAR -->
+<div id="navbar">
+  <div class="nav-logo"><i class="fas fa-baseball" style="color:var(--accent)"></i> MLB <span>LIVE</span> HUB</div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showSection('home',this)"><i class="fas fa-home"></i> <span class="btn-label">Home</span></button>
+    <button class="nav-btn" onclick="showSection('scoreboard',this)"><i class="fas fa-tv"></i> <span class="btn-label">Scoreboard</span></button>
+    <button class="nav-btn" onclick="showSection('standings',this)"><i class="fas fa-list-ol"></i> <span class="btn-label">Standings</span></button>
+    <button class="nav-btn" onclick="showSection('team',this)"><i class="fas fa-users"></i> <span class="btn-label">Roster</span></button>
+    <button class="nav-btn" onclick="showSection('schedule',this)"><i class="fas fa-calendar"></i> <span class="btn-label">Schedule</span></button>
+    <button class="nav-btn" onclick="showSection('leaders',this)"><i class="fas fa-trophy"></i> <span class="btn-label">Leaders</span></button>
+  </div>
+  <div class="nav-right">
+    <select class="team-select" id="teamSelector" onchange="switchTeam(this.value)"></select>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh data"><i class="fas fa-sync-alt"></i></button>
+    <span class="last-update" id="lastUpdate"></span>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="section active" id="section-home">
+  <div id="homeContent"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+</div>
+
+<!-- SCOREBOARD -->
+<div class="section" id="section-scoreboard">
+  <div class="section-title"><i class="fas fa-tv"></i> Today's Scoreboard <span id="scoreDate" style="font-size:.7rem;color:rgba(255,255,255,.4);font-weight:600;margin-left:8px"></span></div>
+  <div id="dateNav" style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+    <button class="filter-btn" onclick="changeDate(-1)"><i class="fas fa-chevron-left"></i> Yesterday</button>
+    <button class="filter-btn active" onclick="changeDate(0)">Today</button>
+    <button class="filter-btn" onclick="changeDate(1)">Tomorrow <i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div class="scoreboard" id="scoreboardGrid"><div class="loading"><span class="spinner"></span>Loading games...</div></div>
+</div>
+
+<!-- STANDINGS -->
+<div class="section" id="section-standings">
+  <div class="section-title"><i class="fas fa-list-ol"></i> MLB Standings</div>
+  <div class="league-tabs">
+    <button class="league-tab active" onclick="showLeague('all',this)">All Divisions</button>
+    <button class="league-tab" onclick="showLeague('AL',this)">American League</button>
+    <button class="league-tab" onclick="showLeague('NL',this)">National League</button>
+  </div>
+  <div class="standings-container" id="standingsGrid"><div class="loading"><span class="spinner"></span>Loading standings...</div></div>
+</div>
+
+<!-- TEAM / ROSTER -->
+<div class="section" id="section-team">
+  <div id="teamContent"><div class="loading"><span class="spinner"></span>Loading team...</div></div>
+</div>
+
+<!-- SCHEDULE -->
+<div class="section" id="section-schedule">
+  <div class="section-title"><i class="fas fa-calendar"></i> <span id="schedTeamName">Team</span> Schedule</div>
+  <div class="schedule-filters" id="schedFilters">
+    <button class="filter-btn active" onclick="filterSched('upcoming',this)">Upcoming</button>
+    <button class="filter-btn" onclick="filterSched('all',this)">Full Season</button>
+    <button class="filter-btn" onclick="filterSched('completed',this)">Completed</button>
+    <button class="filter-btn" onclick="filterSched('home',this)">Home</button>
+    <button class="filter-btn" onclick="filterSched('away',this)">Away</button>
+  </div>
+  <div class="schedule-grid" id="scheduleGrid"><div class="loading"><span class="spinner"></span>Loading schedule...</div></div>
+</div>
+
+<!-- LEADERS -->
+<div class="section" id="section-leaders">
+  <div class="section-title"><i class="fas fa-trophy"></i> <span id="leadersTeamName">Team</span> Leaders</div>
+  <div class="leaders-grid" id="leadersGrid"><div class="loading"><span class="spinner"></span>Loading leaders...</div></div>
+</div>
+
+<!-- PLAYER MODAL -->
+<div id="playerModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<footer>
+  <div style="margin-bottom:6px"><i class="fas fa-baseball" style="font-size:1.2rem"></i></div>
+  <div style="font-weight:700;margin-bottom:4px">MLB Live Hub</div>
+  <div>Data from MLB Stats API · Auto-refreshes every 30 seconds</div>
+</footer>
+
+<script>
+const API='https://statsapi.mlb.com/api/v1';
+const TEAMS_MAP={};
+let currentTeam=144;
+let currentDate=new Date().toISOString().slice(0,10);
+let standingsData=null;
+let refreshTimer=null;
+let allScheduleGames=[];
+let currentFilter='upcoming';
+
+const DIVISIONS={200:'AL East',201:'AL Central',202:'AL West',203:'NL East',204:'NL Central',205:'NL West'};
+const DIV_LEAGUE={200:'AL',201:'AL',202:'AL',203:'NL',204:'NL',205:'NL'};
+
+// ── TEAM INFO DATABASE ──
+const TEAM_INFO={
+  109:{emoji:'🐍',slogan:'Strike First',colors:['#A71930','#E3D4AD','#000000'],est:1998,titles:['2001'],park:'Chase Field',parkCity:'Phoenix, AZ',parkCapacity:48519,parkOpened:1998,bg:'D-BACKS',facts:['Only team to win WS in first 4 years of existence','Known for the pool beyond center field','Randy Johnson & Curt Schilling dominated 2001 postseason','Luis Gonzalez hit the walk-off in Game 7 of 2001 WS','First team to hit back-to-back-to-back HRs in WS history']},
+  144:{emoji:'🪓',slogan:'Chop On!',colors:['#CE1141','#13274F','#EAAA00'],est:1871,titles:['1914','1957','1995','2021'],park:'Truist Park',parkCity:'Atlanta, GA',parkCapacity:41084,parkOpened:2017,bg:'BRAVES',facts:['Oldest continuously operating professional sports franchise in North America (est. 1871)','Won 14 consecutive division titles from 1991-2005','Hank Aaron hit his record-breaking 715th HR as a Brave in 1974','The tomahawk chop became iconic in the early 1990s','Have played in Boston, Milwaukee, and Atlanta']},
+  110:{emoji:'🐦',slogan:'Birdland',colors:['#DF4601','#000000','#F4911E'],est:1901,titles:['1966','1970','1983'],park:'Oriole Park at Camden Yards',parkCity:'Baltimore, MD',parkCapacity:44970,parkOpened:1992,bg:'ORIOLES',facts:['Camden Yards revolutionized ballpark design when it opened in 1992','Cal Ripken Jr. played 2,632 consecutive games as an Oriole','Frank Robinson was first African American manager in MLB (1975)','The Warehouse beyond right field is 1,016 feet long','Oriole Park inspired a wave of retro-modern ballpark construction']},
+  111:{emoji:'🧦',slogan:'Red Sox Nation',colors:['#BD3039','#0C2340','#FFFFFF'],est:1901,titles:['1903','1912','1915','1916','1918','2004','2007','2013','2018'],park:'Fenway Park',parkCity:'Boston, MA',parkCapacity:37755,parkOpened:1912,bg:'RED SOX',facts:['Fenway Park is the oldest active MLB ballpark (1912)','The Green Monster in left field is 37 feet 2 inches tall','Broke the "Curse of the Bambino" in 2004 after 86 years','Ted Williams hit .406 in 1941 — last player to hit .400','David Ortiz became "Big Papi" and led 3 championship runs']},
+  112:{emoji:'🐻',slogan:'Go Cubs Go',colors:['#0E3386','#CC3433','#FFFFFF'],est:1876,titles:['1907','1908','2016'],park:'Wrigley Field',parkCity:'Chicago, IL',parkCapacity:41649,parkOpened:1914,bg:'CUBS',facts:['Wrigley Field is the second-oldest MLB ballpark (1914)','Ended 108-year championship drought in 2016','The iconic ivy on outfield walls was planted in 1937','Lights were not installed at Wrigley until 1988','Ernie Banks said "Let\'s play two!" — Mr. Cub']},
+  145:{emoji:'⚫',slogan:'South Side Pride',colors:['#27251F','#C4CED4','#FFFFFF'],est:1901,titles:['1906','1917','2005'],park:'Rate Field',parkCity:'Chicago, IL',parkCapacity:40615,parkOpened:1991,bg:'WHITE SOX',facts:['Won 2005 World Series after 88 years — swept Houston','Home of the 1919 "Black Sox" scandal','Frank Thomas "The Big Hurt" hit 448 HRs as a White Sox','First team to put names on the back of jerseys (1960)','Disco Demolition Night in 1979 caused a riot and forfeit']},
+  113:{emoji:'🔴',slogan:'Go Reds!',colors:['#C6011F','#000000','#FFFFFF'],est:1881,titles:['1919','1940','1975','1976','1990'],park:'Great American Ball Park',parkCity:'Cincinnati, OH',parkCapacity:42319,parkOpened:2003,bg:'REDS',facts:['First professional baseball team (Cincinnati Red Stockings, 1869)','The Big Red Machine won back-to-back WS in 1975-76','Pete Rose, baseball\'s all-time hits leader, spent most career here','Johnny Bench is considered the greatest catcher ever','First team to play a night game under lights (1935)']},
+  114:{emoji:'⚾',slogan:'Our Tribe',colors:['#00385D','#E50022','#FFFFFF'],est:1901,titles:['1920','1948'],park:'Progressive Field',parkCity:'Cleveland, OH',parkCapacity:34830,parkOpened:1994,bg:'GUARDIANS',facts:['Rebranded from Indians to Guardians in 2022','Won 22 consecutive games in 2017 — an AL record','Bob Feller threw 3 no-hitters as a Guardian','The 1954 team won 111 games — still an AL record','Named after the Guardians of Traffic statues on Hope Memorial Bridge']},
+  115:{emoji:'⛰️',slogan:'Mountain Purple',colors:['#33006F','#C4CED4','#000000'],est:1993,titles:[],park:'Coors Field',parkCity:'Denver, CO',parkCapacity:50144,parkOpened:1995,bg:'ROCKIES',facts:['Coors Field sits at 5,280 feet — highest elevation in MLB','Baseballs stored in a humidor to reduce the "Coors Effect"','Todd Helton and Larry Walker are franchise legends','Only NL team to never win a pennant (besides expansion teams)','The "Blake Street Bombers" era made Coors a hitter\'s paradise']},
+  116:{emoji:'🐯',slogan:'Eat \'Em Up',colors:['#0C2340','#FA4616','#FFFFFF'],est:1901,titles:['1935','1945','1968','1984'],park:'Comerica Park',parkCity:'Detroit, MI',parkCapacity:41083,parkOpened:2000,bg:'TIGERS',facts:['Ty Cobb hit .366 lifetime — highest career average ever','Al Kaline became the youngest batting champion at age 20','Miguel Cabrera won the Triple Crown in 2012','Tiger Stadium hosted games for 87 years before Comerica','The 1984 Tigers started 35-5 — best start in MLB history']},
+  117:{emoji:'⭐',slogan:'Take It Back',colors:['#002D62','#EB6E1F','#FFFFFF'],est:1962,titles:['2017','2022'],park:'Daikin Park',parkCity:'Houston, TX',parkCapacity:41168,parkOpened:2000,bg:'ASTROS',facts:['Played in the Astrodome — the "Eighth Wonder of the World"','Won back-to-back pennants 2021-2022 and WS in 2022','Nolan Ryan threw two of his seven no-hitters as an Astro','Jeff Bagwell and Craig Biggio are "Killer B\'s" legends','First team with a retractable roof on a domed stadium']},
+  118:{emoji:'👑',slogan:'Always Royal',colors:['#004687','#BD9B60','#FFFFFF'],est:1969,titles:['1985','2015'],park:'Kauffman Stadium',parkCity:'Kansas City, MO',parkCapacity:37903,parkOpened:1973,bg:'ROYALS',facts:['Only stadium named after a person (Ewing Kauffman)','George Brett\'s Pine Tar Game incident is legendary (1983)','The iconic fountains are the largest privately funded fountain in the world','Won 2015 WS after 30-year drought with homegrown talent','Bo Jackson was the ultimate two-sport athlete as a Royal']},
+  108:{emoji:'😇',slogan:'Light It Up',colors:['#003263','#BA0021','#862633'],est:1961,titles:['2002'],park:'Angel Stadium',parkCity:'Anaheim, CA',parkCapacity:45517,parkOpened:1966,bg:'ANGELS',facts:['Mike Trout — arguably the best player of his generation','Shohei Ohtani became the modern-day Babe Ruth here','The Big A scoreboard is a registered California landmark','Nolan Ryan threw 4 of his 7 no-hitters as an Angel','Have gone through 4 name changes in franchise history']},
+  119:{emoji:'🔵',slogan:'Bleed Blue',colors:['#005A9C','#A5ACAF','#EF3E42'],est:1883,titles:['1955','1959','1963','1965','1981','1988','2020','2024'],park:'UNIQLO Field at Dodger Stadium',parkCity:'Los Angeles, CA',parkCapacity:56000,parkOpened:1962,bg:'DODGERS',facts:['Jackie Robinson broke the color barrier as a Dodger in 1947','Dodger Stadium is the largest MLB stadium by capacity','Sandy Koufax threw a perfect game in 1965','Vin Scully called Dodger games for 67 years','Clayton Kershaw is the franchise\'s modern-era ace','Won 2024 WS — 8 total championships']},
+  146:{emoji:'🐟',slogan:'Make It Miami',colors:['#00A3E0','#EF3340','#000000'],est:1993,titles:['1997','2003'],park:'LoanDepot Park',parkCity:'Miami, FL',parkCapacity:36742,parkOpened:2012,bg:'MARLINS',facts:['Only team to win every World Series they\'ve appeared in (2-0)','Have never won a division title','LoanDepot Park has a retractable roof for Miami weather','Jose Fernandez was one of the most electrifying young pitchers ever','Giancarlo Stanton hit 59 HRs in 2017 before being traded']},
+  158:{emoji:'🍺',slogan:'Brew Crew',colors:['#FFC52F','#12284B','#FFFFFF'],est:1969,titles:[],park:'American Family Field',parkCity:'Milwaukee, WI',parkCapacity:41900,parkOpened:2001,bg:'BREWERS',facts:['Only team with a fan-opening retractable roof','Started as the Seattle Pilots for one season (1969)','Robin Yount won MVP at two different positions','The Famous Racing Sausages are a beloved tradition','Christian Yelich won NL MVP in 2018','Bernie Brewer slides down a yellow slide after home runs']},
+  142:{emoji:'🎯',slogan:'We\'re Gonna Win Twins',colors:['#002B5C','#D31145','#FFFFFF'],est:1901,titles:['1924','1987','1991'],park:'Target Field',parkCity:'Minneapolis, MN',parkCapacity:38544,parkOpened:2010,bg:'TWINS',facts:['Started as Washington Senators before moving to Minnesota in 1961','Kirby Puckett\'s Game 6 catch and HR in 1991 WS is iconic','The Metrodome\'s baggie in right field was unique','Rod Carew won 7 batting titles as a Twin','Harmon Killebrew hit 573 career home runs']},
+  121:{emoji:'🟠',slogan:'Ya Gotta Believe',colors:['#002D72','#FF5910','#FFFFFF'],est:1962,titles:['1969','1986'],park:'Citi Field',parkCity:'New York, NY',parkCapacity:41922,parkOpened:2009,bg:'METS',facts:['The "Miracle Mets" won the 1969 WS in just their 8th season','Tom Seaver "The Franchise" is the greatest Met ever','The 1986 World Series Game 6 Buckner play is legendary','Mr. Met was the first live-action mascot in MLB','The Home Run Apple pops up in center field after every Met HR']},
+  147:{emoji:'⚔️',slogan:'Bronx Bombers',colors:['#003087','#C4CED4','#FFFFFF'],est:1901,titles:['1923','1927','1928','1932','1936','1937','1938','1939','1941','1943','1947','1949','1950','1951','1952','1953','1956','1958','1961','1962','1977','1978','1996','1998','1999','2000','2009'],park:'Yankee Stadium',parkCity:'Bronx, NY',parkCapacity:47309,parkOpened:2009,bg:'YANKEES',facts:['27 World Series titles — most in professional sports','Babe Ruth, Lou Gehrig, Joe DiMaggio, Mickey Mantle, Derek Jeter','Monument Park honors the all-time Yankee greats','The original Yankee Stadium was "The House That Ruth Built"','The pinstripes are the most iconic uniform in sports']},
+  133:{emoji:'🐘',slogan:'Rooted in Oakland',colors:['#003831','#EFB21E','#A2AAAD'],est:1901,titles:['1910','1911','1913','1929','1930','1972','1973','1974','1989'],park:'Sutter Health Park',parkCity:'Sacramento, CA',parkCapacity:14014,parkOpened:2000,bg:'ATHLETICS',facts:['9 World Series titles across Philadelphia, KC, and Oakland','Moneyball revolution changed baseball analytics forever','Rickey Henderson — greatest leadoff hitter and base stealer ever','Currently playing in Sacramento while awaiting Las Vegas stadium','The Oakland dynasty of 1972-74 won 3 straight WS titles']},
+  143:{emoji:'🔔',slogan:'Ring the Bell',colors:['#E81828','#002D72','#FFFFFF'],est:1883,titles:['1929','1930','1980','2008'],park:'Citizens Bank Park',parkCity:'Philadelphia, PA',parkCapacity:42792,parkOpened:2004,bg:'PHILLIES',facts:['Mike Schmidt won 3 MVPs — franchise GOAT','Steve Carlton won 4 Cy Young Awards as a Phillie','The Phanatic is considered the best mascot in sports','Chase Utley, Jimmy Rollins, Ryan Howard dominated 2007-2011','Bryce Harper hit a walk-off grand slam in 2022 NLCS']},
+  134:{emoji:'🏴‍☠️',slogan:'Raise the Jolly Roger',colors:['#27251F','#FDB827','#FFFFFF'],est:1882,titles:['1909','1925','1960','1971','1979'],park:'PNC Park',parkCity:'Pittsburgh, PA',parkCapacity:38747,parkOpened:2001,bg:'PIRATES',facts:['PNC Park is widely considered the most beautiful ballpark in MLB','Roberto Clemente got his 3,000th hit in his final at-bat','Bill Mazeroski\'s walk-off HR won the 1960 World Series','The "We Are Family" 1979 team is beloved in Pittsburgh','Honus Wagner\'s baseball card is the most valuable ever']},
+  135:{emoji:'🔔',slogan:'Slam Diego',colors:['#2F241D','#FFC425','#FFFFFF'],est:1969,titles:[],park:'Petco Park',parkCity:'San Diego, CA',parkCapacity:40209,parkOpened:2004,bg:'PADRES',facts:['Tony Gwynn won 8 NL batting titles — "Mr. Padre"','Petco Park\'s Western Metal Supply Co. building is in left field','Trevor Hoffman pioneered the closer role with "Hells Bells"','Fernando Tatis Jr. brought excitement back to San Diego','The only team in California to never win a World Series']},
+  137:{emoji:'🌉',slogan:'Together We\'re Giant',colors:['#FD5A1E','#27251F','#FFFFFF'],est:1883,titles:['1905','1921','1922','1933','1954','2010','2012','2014'],park:'Oracle Park',parkCity:'San Francisco, CA',parkCapacity:41265,parkOpened:2000,bg:'GIANTS',facts:['Barry Bonds hit 762 career HRs — most all time','Willie Mays "The Say Hey Kid" made The Catch in 1954','McCovey Cove beyond right field features kayak fans','Won 3 World Series in 5 years (2010, 2012, 2014)','Moved from New York to San Francisco in 1958 with the Dodgers']},
+  136:{emoji:'🧭',slogan:'Sea Us Rise',colors:['#0C2C56','#005C5C','#C4CED4'],est:1977,titles:[],park:'T-Mobile Park',parkCity:'Seattle, WA',parkCapacity:47929,parkOpened:1999,bg:'MARINERS',facts:['Ken Griffey Jr. had the sweetest swing in baseball history','Ichiro Suzuki set the single-season hits record (262) in 2004','Have never appeared in a World Series','The 2001 team won 116 games — tied for most all-time','Edgar Martinez\'s "The Double" in 1995 saved baseball in Seattle']},
+  138:{emoji:'🐦',slogan:'Go Cards',colors:['#C41E3A','#0C2340','#FFFFFF'],est:1882,titles:['1926','1931','1934','1942','1944','1946','1964','1967','1982','2006','2011'],park:'Busch Stadium',parkCity:'St. Louis, MO',parkCapacity:44383,parkOpened:2006,bg:'CARDINALS',facts:['11 World Series titles — 2nd most in MLB history','Stan Musial "The Man" is the ultimate Cardinal legend','Known for having the "Best Fans in Baseball"','Bob Gibson\'s 1.12 ERA in 1968 is legendary','Albert Pujols hit .300 with 30+ HRs his first 10 years']},
+  139:{emoji:'🌊',slogan:'Rays Up',colors:['#092C5C','#8FBCE6','#F5D130'],est:1998,titles:[],park:'Tropicana Field',parkCity:'St. Petersburg, FL',parkCapacity:25000,parkOpened:1990,bg:'RAYS',facts:['Known for doing more with less — smallest payroll contenders','The catwalks inside the dome create unique ground rules','Went from worst to first — 2008 AL Pennant','Consistently innovative with the opener pitching strategy','Wade Boggs famously rode a horse on the field to celebrate 3,000 hits']},
+  140:{emoji:'⭐',slogan:'Straight Up Texas',colors:['#003278','#C0111F','#FFFFFF'],est:1961,titles:['2023'],park:'Globe Life Field',parkCity:'Arlington, TX',parkCapacity:40300,parkOpened:2020,bg:'RANGERS',facts:['Won their first World Series in 2023 after 63 years','Nolan Ryan threw his 7th no-hitter as a Ranger','Globe Life Field has a retractable roof for Texas summers','Ivan "Pudge" Rodriguez won 13 Gold Gloves','The Rangers were originally the Washington Senators (1961-1971)']},
+  141:{emoji:'🍁',slogan:'Let\'s Go Blue Jays',colors:['#134A8E','#1D2D5C','#E8291C'],est:1977,titles:['1992','1993'],park:'Rogers Centre',parkCity:'Toronto, ON',parkCapacity:49286,parkOpened:1989,bg:'BLUE JAYS',facts:['Only non-US team in MLB','Won back-to-back World Series in 1992-93','Joe Carter\'s walk-off HR in 1993 WS is iconic','Rogers Centre was first stadium with a retractable roof','Vladimir Guerrero Jr. continues his father\'s legacy']},
+  120:{emoji:'🔴',slogan:'Curly W',colors:['#AB0003','#14225A','#FFFFFF'],est:1969,titles:['2019'],park:'Nationals Park',parkCity:'Washington, DC',parkCapacity:41339,parkOpened:2008,bg:'NATIONALS',facts:['Won 2019 WS as a Wild Card — unprecedented run','Started as Montreal Expos before moving to DC in 2005','Max Scherzer threw two no-hitters in 2015','The Presidents Race is a beloved between-inning tradition','Ryan Zimmerman hit the first HR in Nationals Park history']}
+};
+
+// ── INIT ──
+async function init(){
+  try{
+    await loadTeams();
+    buildTeamSelector();
+    const saved=localStorage.getItem('mlbhub_team');
+    if(saved)currentTeam=parseInt(saved);
+    document.getElementById('teamSelector').value=currentTeam;
+    refreshAll();
+    refreshTimer=setInterval(()=>{fetchScoreboard();fetchTicker()},30000);
+    setInterval(updateCountdowns,1000);
+  }catch(e){document.body.innerHTML='<div style="padding:40px;color:#ff6b6b;font-size:1.1rem;text-align:center"><h2>Connection Error</h2><p style="margin-top:12px;color:#ccc">Could not reach MLB Stats API.</p><p style="margin-top:8px;color:#999;font-size:.85rem">Error: '+e.message+'</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#CE1141;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer">Try Again</button></div>'}
+}
+
+async function loadTeams(){
+  try{
+    const r=await fetch(API+'/teams?sportId=1&season=2026');
+    if(!r.ok)throw new Error('API returned '+r.status);
+    const d=await r.json();
+    d.teams.forEach(t=>{TEAMS_MAP[t.id]={id:t.id,name:t.name,abbr:t.abbreviation,short:t.teamName,div:t.division?.id,league:t.league?.id,venue:t.venue?.name}});
+  }catch(e){console.error('Teams load error',e);throw e}
+}
+
+function buildTeamSelector(){
+  const sel=document.getElementById('teamSelector');
+  const divTeams={};
+  Object.values(TEAMS_MAP).forEach(t=>{
+    const dName=DIVISIONS[t.div]||'Other';
+    if(!divTeams[dName])divTeams[dName]=[];
+    divTeams[dName].push(t);
+  });
+  const order=['AL East','AL Central','AL West','NL East','NL Central','NL West'];
+  sel.innerHTML=order.map(d=>{
+    if(!divTeams[d])return'';
+    const opts=divTeams[d].sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${t.id}">${t.abbr} - ${t.short}</option>`).join('');
+    return`<optgroup label="${d}">${opts}</optgroup>`;
+  }).join('');
+  sel.value=currentTeam;
+}
+
+function switchTeam(id){
+  currentTeam=parseInt(id);
+  localStorage.setItem('mlbhub_team',currentTeam);
+  // Update colors from team info
+  const info=TEAM_INFO[currentTeam];
+  if(info){
+    const r=document.documentElement.style;
+    r.setProperty('--secondary',info.colors[0]);
+    r.setProperty('--primary',info.colors[1]||info.colors[0]);
+    r.setProperty('--accent',info.colors[2]||'#EAAA00');
+  }
+  const sec=document.querySelector('.section.active')?.id;
+  if(sec==='section-home')buildHomePage();
+  if(sec==='section-team')loadTeamPage();
+  if(sec==='section-schedule')loadSchedule();
+  if(sec==='section-leaders')loadLeaders();
+}
+
+async function refreshAll(){
+  const btn=document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  // Apply team colors
+  const info=TEAM_INFO[currentTeam];
+  if(info){
+    const r=document.documentElement.style;
+    r.setProperty('--secondary',info.colors[0]);
+    r.setProperty('--primary',info.colors[1]||info.colors[0]);
+    r.setProperty('--accent',info.colors[2]||'#EAAA00');
+  }
+  await Promise.all([fetchTicker(),fetchScoreboard(),fetchStandings(),buildHomePage(),loadSchedule(),loadLeaders()]);
+  btn.classList.remove('spinning');
+  document.getElementById('lastUpdate').textContent='Updated '+new Date().toLocaleTimeString();
+}
+
+// ── SECTIONS ──
+function showSection(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  if(id==='home')buildHomePage();
+  if(id==='team')loadTeamPage();
+  if(id==='schedule')loadSchedule();
+  if(id==='leaders')loadLeaders();
+}
+
+// ── HOME PAGE ──
+async function buildHomePage(){
+  const el=document.getElementById('homeContent');
+  const tm=TEAMS_MAP[currentTeam];
+  const info=TEAM_INFO[currentTeam];
+  if(!tm){el.innerHTML='<div class="empty-state">Select a team</div>';return}
+  
+  // Fetch record
+  let w=0,l=0,pct='.000',streak='--',rs=0,ra=0;
+  try{
+    const r=await fetch(API+`/schedule?teamId=${currentTeam}&season=2026&sportId=1&gameType=R&hydrate=linescore&startDate=2026-03-20&endDate=${currentDate}`);
+    const d=await r.json();
+    const games=d.dates?.flatMap(dt=>dt.games)||[];
+    const finished=games.filter(g=>g.status.abstractGameState==='Final').sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
+    let lastRes='',cnt=0;
+    finished.forEach(g=>{
+      const isHome=g.teams.home.team.id===currentTeam;
+      const won=isHome?g.teams.home.isWinner:g.teams.away.isWinner;
+      const ourR=isHome?(g.linescore?.teams?.home?.runs||0):(g.linescore?.teams?.away?.runs||0);
+      const theirR=isHome?(g.linescore?.teams?.away?.runs||0):(g.linescore?.teams?.home?.runs||0);
+      rs+=ourR;ra+=theirR;
+      if(won)w++;else l++;
+    });
+    for(let i=finished.length-1;i>=0;i--){
+      const g=finished[i];const isHome=g.teams.home.team.id===currentTeam;
+      const won=isHome?g.teams.home.isWinner:g.teams.away.isWinner;
+      const res=won?'W':'L';
+      if(!lastRes)lastRes=res;
+      if(res===lastRes)cnt++;else break;
+    }
+    streak=lastRes+cnt;
+    pct=w+l>0?(w/(w+l)).toFixed(3):'.000';
+    allScheduleGames=games;
+  }catch(e){}
+
+  const titlesStr=info?.titles?.length?info.titles.join(', '):'None yet';
+  const titleCount=info?.titles?.length||0;
+  const sClass=streak.startsWith('W')?'win':'loss';
+
+  let html=`<div class="home-hero"><div class="home-hero-bg"><div class="bg-text">${info?.bg||tm.abbr}</div>`;
+  html+=`<div class="team-emoji">${info?.emoji||'⚾'}</div>`;
+  html+=`<div class="team-name">${tm.name}</div>`;
+  if(info?.slogan)html+=`<div class="team-slogan">"${info.slogan}"</div>`;
+  html+=`<div class="team-record-big">${w}-${l} <span class="pct">(${pct})</span></div>`;
+  html+=`<div class="streak-pill ${sClass}">${streak==='undefined0'||streak==='0'?'--':streak}</div>`;
+  html+=`</div></div>`;
+
+  // Quick Stats
+  html+=`<div class="quick-stats">`;
+  html+=`<div class="quick-pill"><i class="fas fa-trophy"></i><div><div class="pill-text">World Series Titles</div><div class="pill-val">${titleCount} ${titleCount>0?'('+titlesStr+')':'— Still chasing the dream!'}</div></div></div>`;
+  html+=`<div class="quick-pill"><i class="fas fa-building"></i><div><div class="pill-text">Division</div><div class="pill-val">${DIVISIONS[tm.div]||'MLB'}</div></div></div>`;
+  html+=`<div class="quick-pill"><i class="fas fa-calendar-alt"></i><div><div class="pill-text">Established</div><div class="pill-val">${info?.est||'—'}</div></div></div>`;
+  html+=`</div>`;
+  html+=`<div class="quick-stats">`;
+  html+=`<div class="quick-pill"><i class="fas fa-map-marker-alt"></i><div><div class="pill-text">Home Park</div><div class="pill-val">${info?.park||tm.venue||'—'}</div></div></div>`;
+  html+=`<div class="quick-pill"><i class="fas fa-city"></i><div><div class="pill-text">Location</div><div class="pill-val">${info?.parkCity||'—'}</div></div></div>`;
+  html+=`<div class="quick-pill"><i class="fas fa-users"></i><div><div class="pill-text">Capacity</div><div class="pill-val">${info?.parkCapacity?.toLocaleString()||'—'}</div></div></div>`;
+  html+=`</div>`;
+
+  // Quick Access
+  html+=`<div class="quick-access">`;
+  html+=`<div class="qa-card" onclick="showSection('scoreboard',document.querySelectorAll('.nav-btn')[1])"><i class="fas fa-tv"></i><div><div class="qa-text">Live Scoreboard</div><div class="qa-sub">Today's games with live scores</div></div></div>`;
+  html+=`<div class="qa-card" onclick="showSection('team',document.querySelectorAll('.nav-btn')[3])"><i class="fas fa-users"></i><div><div class="qa-text">Active Roster</div><div class="qa-sub">Players & real-time stats</div></div></div>`;
+  html+=`<div class="qa-card" onclick="showSection('schedule',document.querySelectorAll('.nav-btn')[4])"><i class="fas fa-calendar-check"></i><div><div class="qa-text">Schedule</div><div class="qa-sub">Full season with results</div></div></div>`;
+  html+=`<div class="qa-card" onclick="showSection('leaders',document.querySelectorAll('.nav-btn')[5])"><i class="fas fa-trophy"></i><div><div class="qa-text">Team Leaders</div><div class="qa-sub">Top performers this season</div></div></div>`;
+  html+=`</div>`;
+
+  // Info Cards
+  html+=`<div class="info-grid">`;
+  // Season Stats
+  const gp=w+l;
+  html+=`<div class="info-card"><div class="info-header"><i class="fas fa-chart-bar"></i> 2026 Season Stats</div><div class="info-body">`;
+  html+=`<p><strong style="color:var(--accent)">Record:</strong> ${w}-${l} (${pct})</p>`;
+  html+=`<p><strong style="color:var(--accent)">Runs Scored:</strong> ${rs} (${gp?(rs/gp).toFixed(1):'0'} per game)</p>`;
+  html+=`<p><strong style="color:var(--accent)">Runs Allowed:</strong> ${ra} (${gp?(ra/gp).toFixed(1):'0'} per game)</p>`;
+  html+=`<p><strong style="color:var(--accent)">Run Differential:</strong> <span style="color:${rs-ra>=0?'#00ff88':'var(--secondary)'}">${rs-ra>=0?'+':''}${rs-ra}</span></p>`;
+  html+=`<p><strong style="color:var(--accent)">Current Streak:</strong> ${streak}</p>`;
+  html+=`</div></div>`;
+  // Stadium
+  html+=`<div class="info-card"><div class="info-header"><i class="fas fa-building"></i> ${info?.park||'Home Ballpark'}</div><div class="info-body">`;
+  html+=`<p><strong style="color:var(--accent)">Location:</strong> ${info?.parkCity||'—'}</p>`;
+  html+=`<p><strong style="color:var(--accent)">Capacity:</strong> ${info?.parkCapacity?.toLocaleString()||'—'}</p>`;
+  html+=`<p><strong style="color:var(--accent)">Opened:</strong> ${info?.parkOpened||'—'}</p>`;
+  html+=`<p><strong style="color:var(--accent)">Surface:</strong> Natural Grass</p>`;
+  html+=`</div></div>`;
+  // Fun Facts
+  if(info?.facts?.length){
+    html+=`<div class="info-card"><div class="info-header"><i class="fas fa-star"></i> Fun Facts & History</div><div class="info-body">`;
+    info.facts.forEach(f=>{html+=`<div class="fun-fact"><i class="fas fa-baseball"></i><span>${f}</span></div>`});
+    html+=`</div></div>`;
+  }
+  // WS Titles
+  if(info?.titles?.length){
+    html+=`<div class="info-card"><div class="info-header"><i class="fas fa-trophy"></i> World Series Championships (${info.titles.length})</div><div class="info-body">`;
+    html+=`<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+    info.titles.forEach(y=>{html+=`<span style="background:rgba(0,0,0,.3);padding:6px 14px;border-radius:6px;font-weight:800;font-size:.85rem;border:1px solid var(--accent);color:var(--accent)">${y}</span>`});
+    html+=`</div></div></div>`;
+  }
+  html+=`</div>`;
+
+  el.innerHTML=html;
+}
+
+// ── TICKER ── (PRESERVED EXACTLY)
+async function fetchTicker(){
+  try{
+    const r=await fetch(API+`/schedule?date=${new Date().toISOString().slice(0,10)}&sportId=1&hydrate=linescore`);
+    const d=await r.json();
+    const games=d.dates?.[0]?.games||[];
+    if(!games.length){document.getElementById('tickerTrack').innerHTML='<span style="padding:0 20px;opacity:.5">No games today</span>';return}
+    const items=games.map(g=>{
+      const away=g.teams.away,home=g.teams.home;
+      const aName=TEAMS_MAP[away.team.id]?.abbr||away.team.name.slice(0,3).toUpperCase();
+      const hName=TEAMS_MAP[home.team.id]?.abbr||home.team.name.slice(0,3).toUpperCase();
+      const ls=g.linescore||{};
+      const st=g.status.abstractGameState;
+      const aR=ls.teams?.away?.runs??'-';
+      const hR=ls.teams?.home?.runs??'-';
+      let statusHtml='';
+      if(st==='Live'||st==='In Progress')statusHtml=`<span class="live-badge">LIVE</span>`;
+      else if(st==='Final')statusHtml=`<span class="status">FINAL</span>`;
+      else{
+        const gt=new Date(g.gameDate);
+        statusHtml=`<span class="status">${gt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>`;
+      }
+      return`<div class="ticker-game">${aName} <span class="score">${aR}</span> @ <span class="score">${hR}</span> ${hName} ${statusHtml}</div>`;
+    }).join('');
+    document.getElementById('tickerTrack').innerHTML=items+items;
+  }catch(e){console.error('Ticker error',e)}
+}
+
+// ── SCOREBOARD ── (PRESERVED EXACTLY)
+async function fetchScoreboard(){
+  const grid=document.getElementById('scoreboardGrid');
+  grid.innerHTML='<div class="loading"><span class="spinner"></span>Loading games...</div>';
+  document.getElementById('scoreDate').textContent=new Date(currentDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  try{
+    const r=await fetch(API+`/schedule?date=${currentDate}&sportId=1&hydrate=linescore,venue`);
+    const d=await r.json();
+    const games=d.dates?.[0]?.games||[];
+    if(!games.length){grid.innerHTML='<div class="empty-state"><i class="fas fa-baseball" style="font-size:2rem;display:block;margin-bottom:10px"></i>No games scheduled</div>';return}
+    grid.innerHTML=games.map(g=>renderGameCard(g)).join('');
+  }catch(e){grid.innerHTML='<div class="empty-state">Error loading scoreboard</div>';console.error(e)}
+}
+
+function renderGameCard(g){
+  const away=g.teams.away,home=g.teams.home;
+  const aName=TEAMS_MAP[away.team.id]?.abbr||'???';
+  const hName=TEAMS_MAP[home.team.id]?.abbr||'???';
+  const aFull=TEAMS_MAP[away.team.id]?.short||away.team.name;
+  const hFull=TEAMS_MAP[home.team.id]?.short||home.team.name;
+  const ls=g.linescore||{};
+  const st=g.status.abstractGameState;
+  const det=g.status.detailedState;
+  const aR=ls.teams?.away?.runs;
+  const hR=ls.teams?.home?.runs;
+  const aH=ls.teams?.away?.hits??'';
+  const hH=ls.teams?.home?.hits??'';
+  const aE=ls.teams?.away?.errors??'';
+  const hE=ls.teams?.home?.errors??'';
+  const isLive=st==='Live'||st==='In Progress';
+  const isFinal=st==='Final';
+  const awayWin=isFinal&&aR>hR;
+  const homeWin=isFinal&&hR>aR;
+  let statusText='',statusClass='';
+  if(isLive){const inn=ls.currentInning||'?';const half=ls.inningHalf==='Top'?'Top':'Bot';statusText=`${half} ${inn}`;statusClass='live'}
+  else if(isFinal){statusText=det||'Final';statusClass='final'}
+  else{const gt=new Date(g.gameDate);statusText=gt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
+  let linescoreHtml='';
+  if(ls.innings&&ls.innings.length>0){
+    const headers=ls.innings.map((_,i)=>`<th>${i+1}</th>`).join('');
+    const awayInns=ls.innings.map(inn=>`<td>${inn.away?.runs??''}</td>`).join('');
+    const homeInns=ls.innings.map(inn=>`<td>${inn.home?.runs??''}</td>`).join('');
+    linescoreHtml=`<div class="game-linescore"><table class="linescore-table"><tr><th></th>${headers}<th>R</th><th>H</th><th>E</th></tr><tr><td style="font-weight:700">${aName}</td>${awayInns}<td class="total">${aR??''}</td><td>${aH}</td><td>${aE}</td></tr><tr><td style="font-weight:700">${hName}</td>${homeInns}<td class="total">${hR??''}</td><td>${hH}</td><td>${hE}</td></tr></table></div>`;
+  }
+  const venue=g.venue?.name||'';
+  return`<div class="game-card${isLive?' live':''}"><div class="game-header"><span>${venue}</span><span class="game-status ${statusClass}">${isLive?'<i class="fas fa-circle" style="font-size:.5rem;color:#00ff88;margin-right:4px"></i>':''}${statusText}</span></div><div class="game-teams"><div class="team-row${awayWin?' winner':''}"><span class="team-info">${aFull}<span class="record">(${away.leagueRecord.wins}-${away.leagueRecord.losses})</span></span><span class="runs">${aR??'-'}</span></div><div class="team-row${homeWin?' winner':''}"><span class="team-info">${hFull}<span class="record">(${home.leagueRecord.wins}-${home.leagueRecord.losses})</span></span><span class="runs">${hR??'-'}</span></div></div>${linescoreHtml}</div>`;
+}
+
+function changeDate(offset){
+  if(offset===0)currentDate=new Date().toISOString().slice(0,10);
+  else{const d=new Date(currentDate+'T12:00:00');d.setDate(d.getDate()+offset);currentDate=d.toISOString().slice(0,10)}
+  fetchScoreboard();
+  document.querySelectorAll('#dateNav .filter-btn').forEach(b=>b.classList.remove('active'));
+  if(offset===0)document.querySelectorAll('#dateNav .filter-btn')[1].classList.add('active');
+}
+
+// ── STANDINGS ── (PRESERVED EXACTLY)
+async function fetchStandings(){
+  const grid=document.getElementById('standingsGrid');
+  grid.innerHTML='<div class="loading"><span class="spinner"></span>Loading standings...</div>';
+  try{
+    const r=await fetch(API+'/standings?leagueId=103,104&season=2026&standingsTypes=regularSeason&hydrate=team');
+    const d=await r.json();
+    standingsData=d.records||[];
+    renderStandings('all');
+  }catch(e){grid.innerHTML='<div class="empty-state">Error loading standings</div>';console.error(e)}
+}
+
+function renderStandings(league){
+  const grid=document.getElementById('standingsGrid');
+  let records=standingsData||[];
+  if(league!=='all')records=records.filter(r=>DIV_LEAGUE[r.division?.id]===league);
+  grid.innerHTML=records.map(div=>{
+    const divName=DIVISIONS[div.division?.id]||'Division';
+    const rows=div.teamRecords.map((t,i)=>{
+      const ab=TEAMS_MAP[t.team.id]?.abbr||'???';
+      const nm=TEAMS_MAP[t.team.id]?.short||t.team.name;
+      const gb=t.gamesBack==='-'?'-':t.gamesBack;
+      const last10=t.records?.splitRecords?.find(r=>r.type==='lastTen');
+      const l10=last10?`${last10.wins}-${last10.losses}`:'';
+      const streak=t.streak?.streakCode||'';
+      const sClass=streak.startsWith('W')?'streak-w':'streak-l';
+      return`<tr class="${i===0?'first-place':''}"><td class="rank">${i+1}</td><td class="team-name" onclick="document.getElementById('teamSelector').value=${t.team.id};switchTeam(${t.team.id});showSection('home',document.querySelectorAll('.nav-btn')[0])" title="View ${nm}">${ab} ${nm}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.winningPercentage}</td><td class="gb">${gb}</td><td class="${sClass}">${streak}</td><td>${l10}</td><td>${t.runsScored||''}</td><td>${t.runsAllowed||''}</td></tr>`;
+    }).join('');
+    return`<div class="division-card"><div class="division-header"><span>${divName}</span></div><table class="standings-table"><thead><tr><th></th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>STR</th><th>L10</th><th>RS</th><th>RA</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+}
+
+function showLeague(league,btn){
+  document.querySelectorAll('.league-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStandings(league);
+}
+
+// ── TEAM PAGE ── (PRESERVED + ENHANCED WITH BIOS)
+async function loadTeamPage(){
+  const el=document.getElementById('teamContent');
+  const tm=TEAMS_MAP[currentTeam];
+  const info=TEAM_INFO[currentTeam];
+  if(!tm){el.innerHTML='<div class="empty-state">Select a team</div>';return}
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Loading team data...</div>';
+  try{
+    const [rosterRes,schedRes]=await Promise.all([
+      fetch(API+`/teams/${currentTeam}/roster?rosterType=active&season=2026`),
+      fetch(API+`/schedule?teamId=${currentTeam}&season=2026&sportId=1&gameType=R&hydrate=linescore&startDate=2026-03-20&endDate=${currentDate}`)
+    ]);
+    const rosterData=await rosterRes.json();
+    const schedData=await schedRes.json();
+    const games=schedData.dates?.flatMap(d=>d.games)||[];
+    const record=calcRecord(games);
+    const roster=rosterData.roster||[];
+    const posOrder={'C':1,'1B':2,'2B':3,'3B':4,'SS':5,'LF':6,'CF':7,'RF':8,'DH':9,'OF':10,'IF':11,'P':20,'SP':21,'RP':22};
+    roster.sort((a,b)=>(posOrder[a.position.abbreviation]||15)-(posOrder[b.position.abbreviation]||15));
+
+    let html=`<div class="team-hero"><div class="bg-text">${info?.bg||tm.abbr}</div><div style="font-size:2.5rem;margin-bottom:4px">${info?.emoji||'⚾'}</div><div class="team-name">${tm.name}</div><div class="team-record">${record.w}-${record.l} (${record.pct})</div><div class="team-meta"><div class="meta-item"><i class="fas fa-map-marker-alt"></i> ${info?.park||tm.venue||''}</div><div class="meta-item"><i class="fas fa-baseball"></i> ${DIVISIONS[tm.div]||''}</div><div class="meta-item"><i class="fas fa-fire"></i> Streak: ${record.streak}</div><div class="meta-item"><i class="fas fa-trophy"></i> WS Titles: ${info?.titles?.length||0}</div><div class="meta-item"><i class="fas fa-calendar"></i> Est. ${info?.est||'—'}</div></div></div>`;
+    html+=`<div class="section-title" style="font-size:1.1rem"><i class="fas fa-users"></i> Active Roster (${roster.length})</div>`;
+    html+=`<div class="schedule-filters"><button class="filter-btn active" onclick="filterRoster('all',this)">All</button><button class="filter-btn" onclick="filterRoster('pos',this)">Position Players</button><button class="filter-btn" onclick="filterRoster('pitch',this)">Pitchers</button></div>`;
+    html+=`<div class="team-roster" id="rosterGrid">${roster.map(p=>{
+      const isPitcher=p.position.type==='Pitcher';
+      return`<div class="player-card" data-type="${isPitcher?'pitch':'pos'}" onclick="loadPlayer(${p.person.id})"><div class="player-header"><div><div class="player-name">${p.person.fullName}</div><div class="player-pos">${p.position.name}</div></div><div class="player-num">#${p.jerseyNumber||'--'}</div></div></div>`;
+    }).join('')}</div>`;
+    el.innerHTML=html;
+    loadRosterStats(roster);
+  }catch(e){el.innerHTML='<div class="empty-state">Error loading team</div>';console.error(e)}
+}
+
+function calcRecord(games){
+  let w=0,l=0,streak='',streakCount=0,lastResult='';
+  const sorted=games.filter(g=>g.status.abstractGameState==='Final').sort((a,b)=>new Date(a.gameDate)-new Date(b.gameDate));
+  sorted.forEach(g=>{const isHome=g.teams.home.team.id===currentTeam;const won=isHome?g.teams.home.isWinner:g.teams.away.isWinner;if(won)w++;else l++});
+  for(let i=sorted.length-1;i>=0;i--){const g=sorted[i];const isHome=g.teams.home.team.id===currentTeam;const won=isHome?g.teams.home.isWinner:g.teams.away.isWinner;const res=won?'W':'L';if(!lastResult)lastResult=res;if(res===lastResult)streakCount++;else break}
+  streak=lastResult+streakCount;const pct=w+l>0?(w/(w+l)).toFixed(3):'.000';return{w,l,pct,streak};
+}
+
+async function loadRosterStats(roster){
+  const ids=roster.map(p=>p.person.id);
+  for(let i=0;i<ids.length;i+=5){
+    const batch=ids.slice(i,i+5);
+    await Promise.all(batch.map(async id=>{
+      try{
+        const r=await fetch(API+`/people/${id}?hydrate=stats(group=[hitting,pitching],type=[season],season=2026)`);
+        const d=await r.json();
+        const p=d.people?.[0];if(!p)return;
+        const card=document.querySelector(`.player-card[onclick="loadPlayer(${id})"]`);if(!card)return;
+        const hitting=p.stats?.find(s=>s.group?.displayName==='hitting')?.splits?.[0]?.stat;
+        const pitching=p.stats?.find(s=>s.group?.displayName==='pitching')?.splits?.[0]?.stat;
+        let statsHtml='';
+        if(hitting&&hitting.gamesPlayed>0){statsHtml=`<div class="player-stats"><div class="stat"><div class="val">${hitting.avg||'-'}</div><div class="lbl">AVG</div></div><div class="stat"><div class="val">${hitting.homeRuns||0}</div><div class="lbl">HR</div></div><div class="stat"><div class="val">${hitting.rbi||0}</div><div class="lbl">RBI</div></div></div>`}
+        else if(pitching&&(pitching.gamesPlayed>0||pitching.inningsPitched)){statsHtml=`<div class="player-stats"><div class="stat"><div class="val">${pitching.era||'-'}</div><div class="lbl">ERA</div></div><div class="stat"><div class="val">${pitching.wins||0}-${pitching.losses||0}</div><div class="lbl">W-L</div></div><div class="stat"><div class="val">${pitching.strikeOuts||0}</div><div class="lbl">K</div></div></div>`}
+        if(statsHtml){const existing=card.querySelector('.player-stats');if(existing)existing.outerHTML=statsHtml;else card.insertAdjacentHTML('beforeend',statsHtml)}
+      }catch(e){}
+    }));
+  }
+}
+
+function filterRoster(type,btn){
+  document.querySelectorAll('.schedule-filters .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#rosterGrid .player-card').forEach(c=>{
+    if(type==='all')c.style.display='';else c.style.display=c.dataset.type===type?'':'none'});
+}
+
+// ── PLAYER MODAL ── (ENHANCED WITH BIO + GAME LOG)
+async function loadPlayer(id){
+  const modal=document.getElementById('playerModal');
+  const content=document.getElementById('modalContent');
+  content.innerHTML='<div class="loading" style="padding:40px"><span class="spinner"></span>Loading player...</div>';
+  modal.classList.add('open');
+  try{
+    const r=await fetch(API+`/people/${id}?hydrate=stats(group=[hitting,pitching],type=[season,gameLog],season=2026)`);
+    const d=await r.json();
+    const p=d.people?.[0];if(!p){content.innerHTML='<div class="empty-state">Player not found</div>';return}
+    const hitting=p.stats?.find(s=>s.group?.displayName==='hitting'&&s.type?.displayName==='season')?.splits?.[0]?.stat;
+    const pitching=p.stats?.find(s=>s.group?.displayName==='pitching'&&s.type?.displayName==='season')?.splits?.[0]?.stat;
+    const hitLog=p.stats?.find(s=>s.group?.displayName==='hitting'&&s.type?.displayName==='gameLog')?.splits||[];
+    const pitchLog=p.stats?.find(s=>s.group?.displayName==='pitching'&&s.type?.displayName==='gameLog')?.splits||[];
+
+    let statsHtml='',logHtml='';
+    if(hitting&&hitting.gamesPlayed>0){
+      const stats=[{v:hitting.avg,l:'AVG'},{v:hitting.obp,l:'OBP'},{v:hitting.slg,l:'SLG'},{v:hitting.ops,l:'OPS'},{v:hitting.homeRuns,l:'HR'},{v:hitting.rbi,l:'RBI'},{v:hitting.hits,l:'H'},{v:hitting.runs,l:'R'},{v:hitting.stolenBases,l:'SB'},{v:hitting.strikeOuts,l:'SO'},{v:hitting.baseOnBalls,l:'BB'},{v:hitting.gamesPlayed,l:'G'}];
+      statsHtml=`<div class="modal-stats">${stats.map(s=>`<div class="modal-stat"><div class="val">${s.v??'-'}</div><div class="lbl">${s.l}</div></div>`).join('')}</div>`;
+      if(hitLog.length){
+        const recent=hitLog.slice(-7).reverse();
+        logHtml=`<div class="modal-section"><div class="modal-section-title">Recent Game Log</div><div class="modal-game-log"><table><tr><th>Date</th><th>Opp</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>BB</th><th>SO</th></tr>${recent.map(g=>`<tr><td>${g.date?.slice(5)||''}</td><td>${g.opponent?.abbreviation||''}</td><td>${g.stat.atBats??''}</td><td>${g.stat.hits??''}</td><td>${g.stat.homeRuns??''}</td><td>${g.stat.rbi??''}</td><td>${g.stat.baseOnBalls??''}</td><td>${g.stat.strikeOuts??''}</td></tr>`).join('')}</table></div></div>`;
+      }
+    }else if(pitching){
+      const stats=[{v:pitching.era,l:'ERA'},{v:`${pitching.wins||0}-${pitching.losses||0}`,l:'W-L'},{v:pitching.inningsPitched,l:'IP'},{v:pitching.strikeOuts,l:'K'},{v:pitching.whip,l:'WHIP'},{v:pitching.avg,l:'BAA'},{v:pitching.saves,l:'SV'},{v:pitching.holds,l:'HLD'},{v:pitching.gamesPlayed,l:'G'},{v:pitching.gamesStarted,l:'GS'},{v:pitching.baseOnBalls,l:'BB'},{v:pitching.homeRuns,l:'HR'}];
+      statsHtml=`<div class="modal-stats">${stats.map(s=>`<div class="modal-stat"><div class="val">${s.v??'-'}</div><div class="lbl">${s.l}</div></div>`).join('')}</div>`;
+      if(pitchLog.length){
+        const recent=pitchLog.slice(-7).reverse();
+        logHtml=`<div class="modal-section"><div class="modal-section-title">Recent Game Log</div><div class="modal-game-log"><table><tr><th>Date</th><th>Opp</th><th>IP</th><th>H</th><th>ER</th><th>BB</th><th>K</th><th>Dec</th></tr>${recent.map(g=>`<tr><td>${g.date?.slice(5)||''}</td><td>${g.opponent?.abbreviation||''}</td><td>${g.stat.inningsPitched??''}</td><td>${g.stat.hits??''}</td><td>${g.stat.earnedRuns??''}</td><td>${g.stat.baseOnBalls??''}</td><td>${g.stat.strikeOuts??''}</td><td>${g.stat.note||''}</td></tr>`).join('')}</table></div></div>`;
+      }
+    }else{statsHtml='<div style="padding:12px;color:rgba(255,255,255,.4);font-size:.85rem">No 2026 stats available yet</div>'}
+    const age=p.birthDate?Math.floor((new Date()-new Date(p.birthDate))/(365.25*86400000)):'';
+    // Bio section from API data
+    let bioHtml='';
+    const birthInfo=[p.birthCity,p.birthStateProvince,p.birthCountry].filter(Boolean).join(', ');
+    if(birthInfo||p.mlbDebutDate){
+      bioHtml=`<div class="modal-section"><div class="modal-section-title">Player Info</div><div class="modal-bio">`;
+      if(birthInfo)bioHtml+=`<p><strong style="color:var(--accent)">Hometown:</strong> ${birthInfo}</p>`;
+      if(p.mlbDebutDate)bioHtml+=`<p><strong style="color:var(--accent)">MLB Debut:</strong> ${new Date(p.mlbDebutDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>`;
+      if(p.draftYear)bioHtml+=`<p><strong style="color:var(--accent)">Drafted:</strong> ${p.draftYear} (Round ${p.draftPickNumber||'?'})</p>`;
+      bioHtml+=`</div></div>`;
+    }
+    content.innerHTML=`<button class="close-btn" onclick="closeModal()" style="position:absolute;top:12px;right:12px;background:none;color:rgba(255,255,255,.5);font-size:1.2rem;padding:4px 8px;border-radius:4px;z-index:10;cursor:pointer"><i class="fas fa-times"></i></button><div class="modal-header"><div style="font-size:1.3rem;font-weight:900">${p.fullName}</div><div style="font-size:.82rem;color:var(--accent);font-weight:700;margin-top:4px">#${p.primaryNumber||'--'} | ${p.primaryPosition?.name||''}</div><div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:6px">${age?age+' yrs':''}${p.height?' · '+p.height:''}${p.weight?' · '+p.weight+'lbs':''}${p.batSide?' · Bats: '+p.batSide.code:''}${p.pitchHand?' · Throws: '+p.pitchHand.code:''}</div></div><div class="modal-body"><div style="font-size:.82rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">2026 Season Stats</div>${statsHtml}${logHtml}${bioHtml}</div>`;
+  }catch(e){content.innerHTML='<div class="empty-state">Error loading player</div>';console.error(e)}
+}
+
+function closeModal(){document.getElementById('playerModal').classList.remove('open')}
+
+// ── SCHEDULE ── (PRESERVED EXACTLY)
+async function loadSchedule(){
+  const grid=document.getElementById('scheduleGrid');
+  const tm=TEAMS_MAP[currentTeam];
+  document.getElementById('schedTeamName').textContent=tm?.short||'Team';
+  grid.innerHTML='<div class="loading"><span class="spinner"></span>Loading schedule...</div>';
+  try{
+    const r=await fetch(API+`/schedule?teamId=${currentTeam}&season=2026&sportId=1&gameType=R&hydrate=linescore,broadcasts,promotions&startDate=2026-03-20&endDate=2026-10-01`);
+    const d=await r.json();
+    allScheduleGames=d.dates?.flatMap(dt=>dt.games)||[];
+    renderSchedule();
+  }catch(e){grid.innerHTML='<div class="empty-state">Error loading schedule</div>';console.error(e)}
+}
+
+function renderSchedule(){
+  const grid=document.getElementById('scheduleGrid');
+  const now=new Date();
+  let games=allScheduleGames;let nextFound=false;
+  if(currentFilter==='upcoming')games=games.filter(g=>new Date(g.gameDate)>=new Date(now.toDateString()));
+  else if(currentFilter==='completed')games=games.filter(g=>g.status.abstractGameState==='Final');
+  else if(currentFilter==='home')games=games.filter(g=>g.teams.home.team.id===currentTeam);
+  else if(currentFilter==='away')games=games.filter(g=>g.teams.away.team.id===currentTeam);
+  if(!games.length){grid.innerHTML='<div class="empty-state">No games found</div>';return}
+  grid.innerHTML=games.slice(0,80).map(g=>{
+    const dt=new Date(g.gameDate);const isHome=g.teams.home.team.id===currentTeam;
+    const opp=isHome?g.teams.away:g.teams.home;const us=isHome?g.teams.home:g.teams.away;
+    const oppName=TEAMS_MAP[opp.team.id]?.short||opp.team.name;const oppAbbr=TEAMS_MAP[opp.team.id]?.abbr||'???';
+    const st=g.status.abstractGameState;const isFinal=st==='Final';const ls=g.linescore||{};
+    const ourR=isHome?ls.teams?.home?.runs:ls.teams?.away?.runs;const theirR=isHome?ls.teams?.away?.runs:ls.teams?.home?.runs;
+    const won=isFinal&&us.isWinner;let resultHtml='',isNext=false;
+    if(isFinal){resultHtml=`<div class="sched-result"><span class="result-badge ${won?'win':'loss'}">${won?'W':'L'} ${ourR}-${theirR}</span></div>`}
+    else{if(!nextFound&&dt>=now){nextFound=true;isNext=true}resultHtml=`<div class="sched-result"><span class="result-badge upcoming">${dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span><div class="countdown" data-time="${g.gameDate}"></div></div>`}
+    const tvCasts=(g.broadcasts||[]).filter(b=>b.type==='TV'&&b.language==='en').map(b=>b.name);
+    const radioCasts=(g.broadcasts||[]).filter(b=>(b.type==='AM'||b.type==='FM')&&b.language==='en').map(b=>b.name);
+    const promos=(g.promotions||[]).map(p=>p.name||p.description||'').filter(Boolean);
+    let broadcastHtml='';
+    if(tvCasts.length)broadcastHtml+=`<span class="sched-tv"><i class="fas fa-tv"></i> ${tvCasts.join(', ')}</span>`;
+    if(radioCasts.length)broadcastHtml+=`<span class="sched-radio"><i class="fas fa-radio"></i> ${radioCasts.join(', ')}</span>`;
+    let promoHtml='';
+    if(promos.length)promoHtml=`<div class="sched-promos">${promos.map(p=>`<span class="sched-promo"><i class="fas fa-gift"></i> ${p}</span>`).join('')}</div>`;
+    return`<div class="sched-card${isNext?' next-game':''}"><div class="sched-date"><div class="month">${dt.toLocaleDateString('en-US',{month:'short'})}</div><div class="day">${dt.getDate()}</div><div class="dow">${dt.toLocaleDateString('en-US',{weekday:'short'})}</div></div><div class="sched-divider"></div><div class="sched-matchup"><div class="teams">${isHome?'vs':'@'} ${oppName} (${oppAbbr})${isNext?'<span class="next-badge">NEXT GAME</span>':''}</div><div class="detail">${isHome?'Home':'Away'} · ${g.venue?.name||''}</div>${broadcastHtml?`<div class="sched-broadcasts">${broadcastHtml}</div>`:''}${promoHtml}</div>${resultHtml}</div>`;
+  }).join('');
+}
+
+function filterSched(type,btn){
+  currentFilter=type;
+  document.querySelectorAll('#schedFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSchedule();
+}
+
+function updateCountdowns(){
+  document.querySelectorAll('.countdown[data-time]').forEach(el=>{
+    const t=new Date(el.dataset.time)-new Date();
+    if(t<=0){el.textContent='Game Time!';return}
+    const d=Math.floor(t/86400000),h=Math
