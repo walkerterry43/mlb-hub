@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mlb-hub-v1';
+const CACHE_NAME = 'mlb-hub-v2';
 const PRECACHE = [
   './',
   './index.html',
@@ -19,17 +19,14 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Fetch — network-first for API calls, cache-first for static assets
+// Fetch — let API calls pass straight through without interception
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // API calls: always go to network (live data is the whole point)
-  if (url.hostname === 'statsapi.mlb.com') {
-    e.respondWith(fetch(e.request));
-    return;
-  }
+  // Do NOT intercept API calls — let the browser handle them directly
+  if (url.hostname === 'statsapi.mlb.com') return;
 
-  // Everything else: try cache first, fall back to network & cache the result
+  // Everything else: try cache first, fall back to network
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

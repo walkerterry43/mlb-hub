@@ -372,22 +372,25 @@ const TEAM_INFO={
 
 // ── INIT ──
 async function init(){
-  await loadTeams();
-  buildTeamSelector();
-  const saved=localStorage.getItem('mlbhub_team');
-  if(saved)currentTeam=parseInt(saved);
-  document.getElementById('teamSelector').value=currentTeam;
-  refreshAll();
-  refreshTimer=setInterval(()=>{fetchScoreboard();fetchTicker()},30000);
-  setInterval(updateCountdowns,1000);
+  try{
+    await loadTeams();
+    buildTeamSelector();
+    const saved=localStorage.getItem('mlbhub_team');
+    if(saved)currentTeam=parseInt(saved);
+    document.getElementById('teamSelector').value=currentTeam;
+    refreshAll();
+    refreshTimer=setInterval(()=>{fetchScoreboard();fetchTicker()},30000);
+    setInterval(updateCountdowns,1000);
+  }catch(e){document.body.innerHTML='<div style="padding:40px;color:#ff6b6b;font-size:1.1rem;text-align:center"><h2>Connection Error</h2><p style="margin-top:12px;color:#ccc">Could not reach MLB Stats API.</p><p style="margin-top:8px;color:#999;font-size:.85rem">Error: '+e.message+'</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#CE1141;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer">Try Again</button></div>'}
 }
 
 async function loadTeams(){
   try{
     const r=await fetch(API+'/teams?sportId=1&season=2026');
+    if(!r.ok)throw new Error('API returned '+r.status);
     const d=await r.json();
     d.teams.forEach(t=>{TEAMS_MAP[t.id]={id:t.id,name:t.name,abbr:t.abbreviation,short:t.teamName,div:t.division?.id,league:t.league?.id,venue:t.venue?.name}});
-  }catch(e){console.error('Teams load error',e)}
+  }catch(e){console.error('Teams load error',e);throw e}
 }
 
 function buildTeamSelector(){
@@ -849,16 +852,4 @@ function updateCountdowns(){
   document.querySelectorAll('.countdown[data-time]').forEach(el=>{
     const t=new Date(el.dataset.time)-new Date();
     if(t<=0){el.textContent='Game Time!';return}
-    const d=Math.floor(t/86400000),h=Math.floor(t%86400000/3600000),m=Math.floor(t%3600000/60000),s=Math.floor(t%60000/1000);
-    el.textContent=d>0?`${d}d ${h}h ${m}m`:h>0?`${h}h ${m}m ${s}s`:`${m}m ${s}s`;
-  });
-}
-
-// ── LEADERS ── (PRESERVED EXACTLY)
-async function loadLeaders(){
-  const grid=document.getElementById('leadersGrid');
-  const tm=TEAMS_MAP[currentTeam];
-  document.getElementById('leadersTeamName').textContent=tm?.short||'Team';
-  grid.innerHTML='<div class="loading"><span class="spinner"></span>Loading leaders...</div>';
-  try{
-    const cats='homeRuns,battingAverage,earnedRunAve
+    const d=Math.floor(t/86400000),h=Math
